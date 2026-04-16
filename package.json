@@ -1,0 +1,14 @@
+{
+  "name": "course-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Online course platform monorepo",
+  "scripts": {
+    "dev:api": "pnpm --filter @course-platform/api dev",
+    "start:api": "pnpm --filter @course-platform/api start"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1"
+}
