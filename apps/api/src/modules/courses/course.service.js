@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Course = require("./course.model");
 const pickFields = require("../../utils/pickFields");
 const AppError = require("../../utils/AppError");
@@ -7,6 +8,19 @@ const createCourse = async (payload, instructorId) => {
     ...payload,
     instructor: instructorId,
   });
+};
+
+const getCourseById = async (courseId) => {
+  if (!mongoose.isValidObjectId(courseId)) {
+    throw new AppError("Invalid course id", 400);
+  }
+
+  const course = await Course.findById(courseId).populate("instructor", "name email role");
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
+
+  return course;
 };
 
 const listCourses = async (query) => {
@@ -73,6 +87,7 @@ const rateCourse = async (courseId, studentId, ratingValue) => {
 
 module.exports = {
   createCourse,
+  getCourseById,
   listCourses,
   rateCourse,
 };

@@ -5,6 +5,7 @@ const restrictTo = require("../../middlewares/role.middleware");
 const controller = require("./course.controller");
 const {
   createCourseSchema,
+  getCourseSchema,
   rateCourseSchema,
   listCoursesSchema,
 } = require("./course.validation");
@@ -12,6 +13,7 @@ const {
 const router = express.Router();
 
 router.get("/", validate(listCoursesSchema), controller.listCourses);
+router.get("/:courseId", validate(getCourseSchema), controller.getCourse);
 router.post(
   "/",
   protect,

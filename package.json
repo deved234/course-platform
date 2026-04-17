@@ -5,7 +5,9 @@
   "description": "Online course platform monorepo",
   "scripts": {
     "dev:api": "pnpm --filter @course-platform/api dev",
-    "start:api": "pnpm --filter @course-platform/api start"
+    "dev:web": "pnpm --filter @course-platform/web dev",
+    "start:api": "pnpm --filter @course-platform/api start",
+    "start:web": "pnpm --filter @course-platform/web start"
   },
   "keywords": [],
   "author": "",

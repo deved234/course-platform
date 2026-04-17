@@ -11,6 +11,16 @@ const createCourse = asyncHandler(async (req, res) => {
   });
 });
 
+const getCourse = asyncHandler(async (req, res) => {
+  const course = await courseService.getCourseById(req.params.courseId);
+
+  res.status(200).json({
+    success: true,
+    message: "Course fetched successfully",
+    data: course,
+  });
+});
+
 const listCourses = asyncHandler(async (req, res) => {
   const data = await courseService.listCourses(req.query);
 
@@ -37,6 +47,7 @@ const rateCourse = asyncHandler(async (req, res) => {
 
 module.exports = {
   createCourse,
+  getCourse,
   listCourses,
   rateCourse,
 };

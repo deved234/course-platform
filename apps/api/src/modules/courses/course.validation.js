@@ -20,6 +20,14 @@ const rateCourseSchema = z.object({
   query: z.object({}).default({}),
 });
 
+const getCourseSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    courseId: z.string().trim().min(1),
+  }),
+  query: z.object({}).default({}),
+});
+
 const listCoursesSchema = z.object({
   body: z.object({}).default({}),
   params: z.object({}).default({}),
@@ -35,6 +43,7 @@ const listCoursesSchema = z.object({
 
 module.exports = {
   createCourseSchema,
+  getCourseSchema,
   rateCourseSchema,
   listCoursesSchema,
 };
