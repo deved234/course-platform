@@ -1,15 +1,23 @@
 export default function Badge({ role }) {
-  const label = role === "instructor" ? "Instructor" : role === "student" ? "Student" : "Guest";
-  const styles =
-    role === "instructor"
-      ? "bg-violet-100 text-violet-900 dark:bg-violet-950 dark:text-violet-200"
-      : role === "student"
-        ? "bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-200"
-        : "bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100";
+  if (role === "instructor") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-violet-100 to-purple-100 px-3 py-1 text-xs font-semibold text-violet-700 dark:from-violet-950/30 dark:to-purple-950/30 dark:text-violet-300">
+        👨‍🏫 Instructor
+      </span>
+    );
+  }
+
+  if (role === "student") {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-emerald-100 to-teal-100 px-3 py-1 text-xs font-semibold text-emerald-700 dark:from-emerald-950/30 dark:to-teal-950/30 dark:text-emerald-300">
+        🎓 Student
+      </span>
+    );
+  }
 
   return (
-    <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${styles}`}>
-      {label}
+    <span className="inline-flex items-center gap-1 rounded-full bg-zinc-200 px-3 py-1 text-xs font-semibold text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100">
+      👤 Guest
     </span>
   );
 }

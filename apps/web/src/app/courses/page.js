@@ -5,7 +5,7 @@ import CourseCard from "@/components/CourseCard";
 export default async function CoursesPage(props) {
   const searchParams = await props.searchParams;
   const page = Math.max(1, Number(searchParams.page) || 1);
-  const limit = Math.min(50, Math.max(1, Number(searchParams.limit) || 10));
+  const limit = Math.min(50, Math.max(1, Number(searchParams.limit) || 12));
   const search = typeof searchParams.search === "string" ? searchParams.search : "";
   const category = typeof searchParams.category === "string" ? searchParams.category : "";
   const sortBy =
@@ -23,7 +23,14 @@ export default async function CoursesPage(props) {
   const { data, error } = await apiFetch(`/courses?${qs.toString()}`);
 
   if (error) {
-    return <p className="text-sm text-red-600 dark:text-red-400">{error}</p>;
+    return (
+      <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-red-900 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+        <p className="flex items-center gap-2">
+          <span className="text-lg">❌</span>
+          <span>{error}</span>
+        </p>
+      </div>
+    );
   }
 
   const items = data?.items ?? [];
@@ -41,88 +48,177 @@ export default async function CoursesPage(props) {
   };
 
   return (
-    <div>
-      <h1 className="text-xl font-bold">Courses</h1>
-      <form action="/courses" method="get" className="mt-4 flex flex-wrap items-end gap-3">
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-4xl font-bold text-zinc-900 dark:text-white flex items-center gap-3">
+          📚 Explore Courses
+        </h1>
+        <p className="mt-2 text-zinc-600 dark:text-zinc-400">
+          Find and enroll in courses that match your learning goals
+        </p>
+      </div>
+
+      {/* Filter Form */}
+      <form action="/courses" method="get" className="rounded-lg border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <h2 className="mb-4 font-semibold text-zinc-900 dark:text-white">Search & Filter</h2>
         <input type="hidden" name="page" value="1" />
         <input type="hidden" name="limit" value={String(limit)} />
-        <div>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Search</label>
-          <input
-            name="search"
-            defaultValue={search}
-            placeholder="Keyword"
-            className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-          />
+        
+        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {/* Search Input */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              🔍 Search
+            </label>
+            <input
+              name="search"
+              defaultValue={search}
+              placeholder="Course name..."
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm placeholder-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950 dark:placeholder-zinc-400 transition-all"
+            />
+          </div>
+
+          {/* Category Input */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              🏷️ Category
+            </label>
+            <input
+              name="category"
+              defaultValue={category}
+              placeholder="e.g. Backend"
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm placeholder-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950 dark:placeholder-zinc-400 transition-all"
+            />
+          </div>
+
+          {/* Sort Select */}
+          <div>
+            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              📊 Sort
+            </label>
+            <select
+              name="sortBy"
+              defaultValue={sortBy}
+              className="w-full rounded-lg border border-zinc-300 bg-white px-3.5 py-2.5 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950 transition-all"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="rating">Highest Rated</option>
+            </select>
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex items-end">
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2.5 text-sm font-medium text-white hover:from-violet-700 hover:to-purple-700 transition-all dark:from-violet-500 dark:to-purple-500"
+            >
+              🔎 Apply Filter
+            </button>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Category</label>
-          <input
-            name="category"
-            defaultValue={category}
-            placeholder="e.g. Backend"
-            className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Sort</label>
-          <select
-            name="sortBy"
-            defaultValue={sortBy}
-            className="mt-1 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-          >
-            <option value="newest">Newest</option>
-            <option value="oldest">Oldest</option>
-            <option value="rating">Rating</option>
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="rounded bg-zinc-900 px-3 py-1.5 text-sm text-white dark:bg-zinc-100 dark:text-zinc-900"
-        >
-          Apply
-        </button>
       </form>
 
-      <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-        {pagination.total} course{pagination.total === 1 ? "" : "s"} · Page {pagination.page} of{" "}
-        {totalPages}
-      </p>
-
-      <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-        {items.map((course) => (
-          <li key={course._id}>
-            <CourseCard course={course} />
-          </li>
-        ))}
-      </ul>
-
-      {items.length === 0 ? (
-        <p className="mt-6 text-sm text-zinc-500">No courses match your filters.</p>
-      ) : null}
-
-      <div className="mt-8 flex items-center justify-between border-t border-zinc-200 pt-4 dark:border-zinc-800">
-        {page > 1 ? (
-          <Link
-            href={linkForPage(page - 1)}
-            className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900"
-          >
-            Previous
-          </Link>
-        ) : (
-          <span className="text-sm text-zinc-400">Previous</span>
-        )}
-        {page < totalPages ? (
-          <Link
-            href={linkForPage(page + 1)}
-            className="rounded border border-zinc-300 px-3 py-1.5 text-sm hover:bg-zinc-100 dark:border-zinc-600 dark:hover:bg-zinc-900"
-          >
-            Next
-          </Link>
-        ) : (
-          <span className="text-sm text-zinc-400">Next</span>
-        )}
+      {/* Stats */}
+      <div className="rounded-lg border border-zinc-200 bg-gradient-to-r from-violet-50 to-purple-50 p-4 dark:border-zinc-800 dark:from-violet-950/20 dark:to-purple-950/20">
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          📈 <span className="font-semibold">{pagination.total}</span> course{pagination.total !== 1 ? "s" : ""} found
+          {pagination.totalPages > 1 && ` • Page ${pagination.page} of ${totalPages}`}
+        </p>
       </div>
+
+      {/* Course Grid */}
+      {items.length === 0 ? (
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-12 text-center dark:border-zinc-800 dark:bg-zinc-900/40">
+          <p className="text-2xl mb-2">🎓</p>
+          <p className="text-zinc-600 dark:text-zinc-400 mb-4">
+            No courses match your filters
+          </p>
+          <Link
+            href="/courses"
+            className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-violet-600 to-purple-600 px-4 py-2 text-sm font-medium text-white hover:from-violet-700 hover:to-purple-700 transition-all"
+          >
+            Clear Filters → 
+          </Link>
+        </div>
+      ) : (
+        <ul className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {items.map((course) => (
+            <li key={course._id}>
+              <CourseCard course={course} />
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between gap-3 border-t border-zinc-200 pt-6 dark:border-zinc-800">
+          {/* First Page */}
+          {page > 1 ? (
+            <Link
+              href={linkForPage(1)}
+              className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              ⟨⟨ First
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-400 dark:border-zinc-700 dark:text-zinc-600">
+              ⟨⟨ First
+            </span>
+          )}
+
+          {/* Previous Page */}
+          {page > 1 ? (
+            <Link
+              href={linkForPage(page - 1)}
+              className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              ⟨ Previous
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-400 dark:border-zinc-700 dark:text-zinc-600">
+              ⟨ Previous
+            </span>
+          )}
+
+          {/* Page Info */}
+          <div className="text-center">
+            <span className="inline-block rounded-lg bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-900 dark:bg-violet-950/30 dark:text-violet-300">
+              Page {page} of {totalPages}
+            </span>
+          </div>
+
+          {/* Next Page */}
+          {page < totalPages ? (
+            <Link
+              href={linkForPage(page + 1)}
+              className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Next ⟩
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-400 dark:border-zinc-700 dark:text-zinc-600">
+              Next ⟩
+            </span>
+          )}
+
+          {/* Last Page */}
+          {page < totalPages ? (
+            <Link
+              href={linkForPage(totalPages)}
+              className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-900 hover:bg-zinc-100 transition-colors dark:border-zinc-600 dark:text-zinc-100 dark:hover:bg-zinc-900"
+            >
+              Last ⟩⟩
+            </Link>
+          ) : (
+            <span className="rounded-lg border border-zinc-300 px-3.5 py-2 text-sm font-medium text-zinc-400 dark:border-zinc-700 dark:text-zinc-600">
+              Last ⟩⟩
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

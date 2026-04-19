@@ -11,7 +11,7 @@ import Link from "next/link";
 export default function CourseDetailClient({ courseId, initialCourse, initialLessons }) {
   const { user, token, role, isLoggedIn } = useAuth();
   const [course, setCourse] = useState(initialCourse);
-  const [lessons, setLessons] = useState(initialLessons);
+  const [lessons, setLessons] = useState(initialLessons || []);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [pending, setPending] = useState(false);
@@ -33,25 +33,28 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
   const isStudent = role === "student";
   const isInstructor = role === "instructor";
 
-  async function refreshCourse() {
-    const { data, error: err } = await apiFetch(`/courses/${courseId}`);
-    if (!err && data) setCourse(data);
-  }
-
-  async function refreshLessons() {
-    const { data, error: err } = await apiFetch(`/courses/${courseId}/lessons`);
-    if (!err && Array.isArray(data)) setLessons(data);
-  }
+  const ratingDisplay = course?.rating?.toFixed(1) ?? "N/A";
+  const ratingCount = course?.ratingCount ?? 0;
 
   async function handleEnroll() {
     if (!token) return;
     setPending(true);
     setError(null);
     setMessage(null);
-    const { error: err } = await apiFetch(`/courses/${courseId}/enroll`, { method: "POST", token });
+
+    const { error: err } = await apiFetch(`/courses/${courseId}/enroll`, {
+      method: "POST",
+      token,
+    });
+
     setPending(false);
-    if (err) setError(err);
-    else setMessage("Enrolled successfully.");
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    setMessage("Successfully enrolled! Welcome aboard!");
+    setTimeout(() => setMessage(null), 3000);
   }
 
   async function handleRatingSubmit() {
@@ -59,17 +62,21 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
     setPending(true);
     setError(null);
     setMessage(null);
+
     const { error: err } = await apiFetch(`/courses/${courseId}/rating`, {
       method: "POST",
       body: { rating },
       token,
     });
+
     setPending(false);
-    if (err) setError(err);
-    else {
-      setMessage("Rating saved.");
-      refreshCourse();
+    if (err) {
+      setError(err);
+      return;
     }
+
+    setMessage("Rating submitted successfully!");
+    setTimeout(() => setMessage(null), 3000);
   }
 
   async function handleProgressSubmit() {
@@ -77,23 +84,36 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
     setPending(true);
     setError(null);
     setMessage(null);
+
     const { error: err } = await apiFetch(`/courses/${courseId}/progress`, {
       method: "PATCH",
       body: { progressPercent: Number(progress) },
       token,
     });
+
     setPending(false);
-    if (err) setError(err);
-    else setMessage("Progress updated.");
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    setMessage("Progress updated successfully!");
+    setTimeout(() => setMessage(null), 3000);
   }
 
   async function handleAddLesson(e) {
     e.preventDefault();
+    if (!isOwner) {
+      setError("You can only add lessons to your own courses");
+      return;
+    }
+
     if (!token) return;
     setPending(true);
     setError(null);
     setMessage(null);
-    const { error: err } = await apiFetch(`/courses/${courseId}/lessons`, {
+
+    const { data, error: err } = await apiFetch(`/courses/${courseId}/lessons`, {
       method: "POST",
       body: {
         title: lessonTitle,
@@ -102,146 +122,218 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
       },
       token,
     });
+
     setPending(false);
     if (err) {
       setError(err);
       return;
     }
-    setMessage("Lesson created.");
+
+    setMessage("Lesson created successfully!");
     setLessonTitle("");
     setLessonContent("");
-    setLessonOrder((n) => Number(n) + 1);
-    refreshLessons();
+    setLessonOrder((prev) => Number(prev) + 1);
+    setLessons((current) => [...current, data]);
+    setTimeout(() => setMessage(null), 3000);
   }
-
-  const ratingDisplay =
-    typeof course?.averageRating === "number" ? course.averageRating.toFixed(2) : "—";
 
   return (
     <div className="space-y-8">
-      <div>
-        <p className="text-sm text-zinc-500">{course.category}</p>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{course.title}</h1>
-        <p className="mt-2 text-zinc-700 dark:text-zinc-300">{course.description}</p>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Instructor: {course.instructor?.name ?? "—"} · Average rating: {ratingDisplay}
+      {/* Course Header */}
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-3">
+          {course?.category && (
+            <span className="inline-block rounded-full bg-linear-to-r from-violet-100 to-purple-100 px-4 py-2 text-sm font-semibold text-violet-700 dark:from-violet-950 dark:to-purple-950 dark:text-violet-300">
+              {course.category}
+            </span>
+          )}
+          {ratingCount > 0 && (
+            <span className="inline-block rounded-full bg-amber-100 px-4 py-2 text-sm font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">
+              ⭐ {ratingDisplay} ({ratingCount} {ratingCount === 1 ? "rating" : "ratings"})
+            </span>
+          )}
+        </div>
+
+        <h1 className="text-5xl font-bold text-zinc-900 dark:text-white leading-tight">
+          {course?.title ?? "Course Details"}
+        </h1>
+
+        <p className="text-xl text-zinc-600 dark:text-zinc-300 leading-relaxed max-w-3xl">
+          {course?.description ?? "No description available for this course yet."}
         </p>
+
+        <div className="flex items-center gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800 mt-4">
+          <span className="text-2xl">👨‍🏫</span>
+          <div>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">Instructor</p>
+            <p className="font-semibold text-zinc-900 dark:text-white">
+              {course?.instructor?.name ?? "Unknown"}
+            </p>
+          </div>
+        </div>
       </div>
 
-      <ErrorMessage message={error} onRetry={() => setError(null)} />
-      {message ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-100">
-          {message}
-        </p>
-      ) : null}
+      {/* Messages */}
+      {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
+      {message && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100 font-medium">
+          ✅ {message}
+        </div>
+      )}
 
-      {isGuest ? (
-        <p className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 px-4 py-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-300">
-          <Link href="/login" className="font-medium text-zinc-900 underline dark:text-zinc-100">
-            Log in
-          </Link>{" "}
-          to enroll, rate, or comment.
-        </p>
-      ) : null}
+      {/* Guest Prompt */}
+      {isGuest && (
+        <div className="rounded-xl border-2 border-dashed border-zinc-300 bg-zinc-50 p-6 text-center dark:border-zinc-700 dark:bg-zinc-900/30">
+          <p className="text-lg mb-3">🔐</p>
+          <p className="text-zinc-700 dark:text-zinc-300 mb-4">
+            <Link href="/login" className="font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 underline">
+              Sign in
+            </Link>{" "}
+            to enroll, rate courses, and leave comments
+          </p>
+        </div>
+      )}
 
-      {isStudent ? (
-        <section className="space-y-4 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Student actions</h2>
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              disabled={pending || !token}
-              onClick={handleEnroll}
-              className="rounded-md bg-zinc-900 px-3 py-2 text-sm text-white disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900"
-            >
-              Enroll in course
-            </button>
+      {/* Student Section */}
+      {isStudent && (
+        <div className="rounded-xl border border-zinc-200 bg-linear-to-br from-emerald-50 to-teal-50 p-6 dark:border-zinc-800 dark:from-emerald-950/20 dark:to-teal-950/20 space-y-6">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            🎓 Student Actions
+          </h2>
+
+          <button
+            type="button"
+            disabled={pending || !token}
+            onClick={handleEnroll}
+            className="w-full rounded-lg bg-linear-to-r from-emerald-600 to-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:from-emerald-700 hover:to-teal-700 disabled:opacity-50 transition-all dark:from-emerald-500 dark:to-teal-500"
+          >
+            ✨ Enroll in Course
+          </button>
+
+          <div className="space-y-4 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+            <h3 className="font-semibold text-zinc-900 dark:text-white">⭐ Rate This Course</h3>
+            <div className="space-y-3">
+              <StarRating value={rating} onChange={setRating} disabled={pending} />
+              <button
+                type="button"
+                disabled={pending || !token}
+                onClick={handleRatingSubmit}
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-all dark:border-zinc-600 dark:hover:bg-zinc-900"
+              >
+                Submit Rating
+              </button>
+            </div>
           </div>
-          <div>
-            <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">Rate course (1–5)</p>
-            <StarRating value={rating} onChange={setRating} disabled={pending} />
-            <button
-              type="button"
-              disabled={pending || !token}
-              onClick={handleRatingSubmit}
-              className="mt-2 rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-600"
-            >
-              Submit rating
-            </button>
+
+          <div className="space-y-4 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+            <h3 className="font-semibold text-zinc-900 dark:text-white">📊 Track Your Progress</h3>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={progress}
+                  onChange={(e) => setProgress(Number(e.target.value))}
+                  className="flex-1 h-2 bg-zinc-200 rounded-lg appearance-none cursor-pointer dark:bg-zinc-700"
+                />
+                <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400 min-w-12.5 text-right">
+                  {progress}%
+                </span>
+              </div>
+              <button
+                type="button"
+                disabled={pending || !token}
+                onClick={handleProgressSubmit}
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50 transition-all dark:border-zinc-600 dark:hover:bg-zinc-900"
+              >
+                Update Progress
+              </button>
+            </div>
           </div>
-          <div>
-            <label className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-              Progress (%)
+        </div>
+      )}
+
+      {/* Instructor Section */}
+      {isInstructor && (
+        <div className="rounded-xl border border-zinc-200 bg-linear-to-br from-violet-50 to-purple-50 p-6 dark:border-zinc-800 dark:from-violet-950/20 dark:to-purple-950/20 space-y-4">
+          <h2 className="text-xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            ✏️ Manage Lessons
+          </h2>
+
+          {!isOwner && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-semibold mb-1">⚠️ Not Your Course</p>
+              <p>You can only add lessons to courses you own.</p>
+            </div>
+          )}
+
+          <form onSubmit={handleAddLesson} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                Lesson Title
+              </label>
               <input
-                type="number"
-                min={0}
-                max={100}
-                value={progress}
-                onChange={(e) => setProgress(e.target.value)}
-                className="ml-2 w-20 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
+                required
+                value={lessonTitle}
+                onChange={(e) => setLessonTitle(e.target.value)}
+                placeholder="e.g., Introduction to React"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm placeholder-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-900 dark:placeholder-zinc-400 transition-all"
               />
-            </label>
-            <button
-              type="button"
-              disabled={pending || !token}
-              onClick={handleProgressSubmit}
-              className="ml-3 rounded border border-zinc-300 px-3 py-1 text-sm dark:border-zinc-600"
-            >
-              Update progress
-            </button>
-          </div>
-        </section>
-      ) : null}
+            </div>
 
-      {isInstructor ? (
-        <section className="space-y-3 rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="font-semibold text-zinc-900 dark:text-zinc-50">Add lesson</h2>
-          {!isOwner ? (
-            <p className="text-sm text-amber-800 dark:text-amber-200">
-              You can only add lessons to courses you own. If you are the owner, refresh after logging in as the correct instructor.
-            </p>
-          ) : null}
-          <form onSubmit={handleAddLesson} className="space-y-2">
-            <input
-              required
-              value={lessonTitle}
-              onChange={(e) => setLessonTitle(e.target.value)}
-              placeholder="Title"
-              className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
-            <textarea
-              required
-              value={lessonContent}
-              onChange={(e) => setLessonContent(e.target.value)}
-              placeholder="Content"
-              rows={4}
-              className="w-full rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
-            <input
-              required
-              type="number"
-              min={1}
-              value={lessonOrder}
-              onChange={(e) => setLessonOrder(e.target.value)}
-              className="w-32 rounded border border-zinc-300 px-2 py-1 text-sm dark:border-zinc-600 dark:bg-zinc-900"
-            />
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                Content
+              </label>
+              <textarea
+                required
+                value={lessonContent}
+                onChange={(e) => setLessonContent(e.target.value)}
+                placeholder="Enter lesson content..."
+                rows={5}
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm placeholder-zinc-500 focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-900 dark:placeholder-zinc-400 transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
+                Lesson Order
+              </label>
+              <input
+                required
+                type="number"
+                min="1"
+                value={lessonOrder}
+                onChange={(e) => setLessonOrder(Number(e.target.value))}
+                className="w-32 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-900 transition-all"
+              />
+            </div>
+
             <button
               type="submit"
               disabled={pending || !token || !isOwner}
-              className="rounded bg-violet-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+              className="rounded-lg bg-violet-600 px-6 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50 transition-all"
             >
-              Create lesson
+              ➕ Create Lesson
             </button>
           </form>
-        </section>
-      ) : null}
+        </div>
+      )}
 
-      <section>
-        <h2 className="mb-3 font-semibold text-zinc-900 dark:text-zinc-50">Lessons</h2>
+      {/* Lessons Section */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+          📚 Course Lessons ({lessons.length})
+        </h2>
+
         {lessons.length === 0 ? (
-          <p className="text-sm text-zinc-500">No lessons yet.</p>
+          <div className="rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900/30">
+            <p className="text-3xl mb-3">📖</p>
+            <p className="text-zinc-600 dark:text-zinc-400">No lessons added yet</p>
+          </div>
         ) : (
-          <ul className="space-y-4">
+          <div className="space-y-4">
             {lessons.map((lesson) => (
               <LessonItem
                 key={lesson._id}
@@ -250,7 +342,7 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
                 canComment={isStudent && Boolean(token)}
               />
             ))}
-          </ul>
+          </div>
         )}
       </section>
     </div>
