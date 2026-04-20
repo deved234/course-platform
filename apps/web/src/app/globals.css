@@ -2,7 +2,7 @@
 
 :root {
   /* Primary — Purple */
-  --color-primary-50:  #EEEDFE;
+  --color-primary-50: #EEEDFE;
   --color-primary-100: #CECBF6;
   --color-primary-200: #AFA9EC;
   --color-primary-400: #7F77DD;
@@ -10,89 +10,89 @@
   --color-primary-800: #3C3489;
 
   /* Teal — برمجة */
-  --color-teal-50:  #E1F5EE;
+  --color-teal-50: #E1F5EE;
   --color-teal-400: #1D9E75;
   --color-teal-800: #085041;
 
   /* Coral — ديزاين */
-  --color-coral-50:  #FAECE7;
+  --color-coral-50: #FAECE7;
   --color-coral-400: #D85A30;
   --color-coral-800: #712B13;
 
   /* Amber — بيزنس */
-  --color-amber-50:  #FAEEDA;
+  --color-amber-50: #FAEEDA;
   --color-amber-400: #EF9F27;
   --color-amber-800: #633806;
 
   /* Pink — لغات */
-  --color-pink-50:  #FBEAF0;
+  --color-pink-50: #FBEAF0;
   --color-pink-400: #D4537E;
   --color-pink-800: #72243E;
 
   /* Surfaces */
-  --color-bg-page:    #fdf6ff;
-  --color-bg-card:    #ffffff;
+  --color-bg-page: #fdf6ff;
+  --color-bg-card: #ffffff;
   --color-bg-surface: #f8f4ff;
 
   /* Text */
-  --color-text-primary:   #1a1a2e;
-  --color-text-muted:     #6b7280;
-  --color-text-hint:      #9ca3af;
+  --color-text-primary: #1a1a2e;
+  --color-text-muted: #6b7280;
+  --color-text-hint: #9ca3af;
 
   /* Borders */
   --color-border-default: rgba(127, 119, 221, 0.15);
-  --color-border-medium:  rgba(127, 119, 221, 0.30);
-  --color-border-strong:  rgba(127, 119, 221, 0.50);
+  --color-border-medium: rgba(127, 119, 221, 0.30);
+  --color-border-strong: rgba(127, 119, 221, 0.50);
 
   /* Radius */
-  --radius-sm:   8px;
-  --radius-md:   12px;
-  --radius-lg:   16px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
   --radius-pill: 999px;
 
   /* Spacing */
-  --space-xs:  4px;
-  --space-sm:  8px;
-  --space-md:  16px;
-  --space-lg:  24px;
-  --space-xl:  32px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
 }
 
 /* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-primary-50:  #26215C;
+    --color-primary-50: #26215C;
     --color-primary-100: #3C3489;
     --color-primary-200: #534AB7;
     --color-primary-400: #7F77DD;
     --color-primary-600: #AFA9EC;
     --color-primary-800: #EEEDFE;
 
-    --color-bg-page:    #0f0e17;
-    --color-bg-card:    #1a1826;
+    --color-bg-page: #0f0e17;
+    --color-bg-card: #1a1826;
     --color-bg-surface: #16141f;
 
     --color-text-primary: #f0eeff;
-    --color-text-muted:   #9ca3af;
-    --color-text-hint:    #6b7280;
+    --color-text-muted: #9ca3af;
+    --color-text-hint: #6b7280;
 
     --color-border-default: rgba(175, 169, 236, 0.12);
-    --color-border-medium:  rgba(175, 169, 236, 0.25);
-    --color-border-strong:  rgba(175, 169, 236, 0.45);
+    --color-border-medium: rgba(175, 169, 236, 0.25);
+    --color-border-strong: rgba(175, 169, 236, 0.45);
 
-    --color-teal-50:  #04342C;
+    --color-teal-50: #04342C;
     --color-teal-400: #1D9E75;
     --color-teal-800: #9FE1CB;
 
-    --color-coral-50:  #4A1B0C;
+    --color-coral-50: #4A1B0C;
     --color-coral-400: #D85A30;
     --color-coral-800: #F5C4B3;
 
-    --color-amber-50:  #412402;
+    --color-amber-50: #412402;
     --color-amber-400: #EF9F27;
     --color-amber-800: #FAC775;
 
-    --color-pink-50:  #4B1528;
+    --color-pink-50: #4B1528;
     --color-pink-400: #D4537E;
     --color-pink-800: #F4C0D1;
   }
@@ -109,9 +109,60 @@ body {
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-medium);
   border-radius: var(--radius-pill);
+}
+
+body {
+  cursor: none;
+}
+
+.cursor {
+  width: 20px;
+  height: 20px;
+  background: rgb(255, 255, 255);
+  border-radius: 50%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+}
+
+.bg-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  overflow: hidden;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  background: rgba(221, 220, 227, 0.241);
+  border-radius: 50%;
+  position: absolute;
+  filter: blur(2px);
+}
+.network-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
 }
