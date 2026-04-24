@@ -163,8 +163,11 @@ Defined in `apps/api/src/routes/index.js`:
 - `PATCH /api/v1/lessons/:lessonId`
 - `DELETE /api/v1/lessons/:lessonId`
 - `POST /api/v1/courses/:courseId/enroll`
+- `GET /api/v1/courses/:courseId/enrollment`
 - `PATCH /api/v1/courses/:courseId/progress`
+- `PATCH /api/v1/courses/:courseId/lessons/:lessonId/completion`
 - `GET /api/v1/enrollments/me`
+- `GET /api/v1/instructor/dashboard`
 - `GET /api/v1/lessons/:lessonId/comments`
 - `POST /api/v1/lessons/:lessonId/comments`
 - `GET /api/v1/comments/:commentId`
@@ -259,6 +262,7 @@ Fields:
 - `course`: ObjectId ref `Course`, required
 - `enrolledAt`: date, default now
 - `progressPercent`: number, default `0`, range `0-100`
+- `completedLessons`: array of lesson ObjectIds
 - timestamps enabled
 
 Indexes:
@@ -298,10 +302,13 @@ Indexes:
 - Only `instructor` can update lessons.
 - Only `instructor` can delete lessons.
 - Only `student` can enroll.
+- Only `student` can read their own course enrollment state.
 - Only `student` can rate courses.
 - Only `student` can update progress.
+- Only `student` can toggle lesson completion in enrolled courses.
 - Only `student` can comment.
 - Only `student` can update their own comments.
+- Only `instructor` can access instructor dashboard data.
 
 ### Ownership rules
 
@@ -315,6 +322,8 @@ Indexes:
 - A student cannot enroll in the same course twice.
 - A student must be enrolled in the lesson's parent course before posting comments.
 - Progress update requires an enrollment record.
+- Lesson completion tracking also requires an enrollment record.
+- `progressPercent` can be derived automatically from completed lessons.
 
 ### Rating rules
 
@@ -606,7 +615,26 @@ Auth:
 Behavior:
 
 - creates an enrollment with `progressPercent = 0`
+- creates an enrollment with empty `completedLessons`
 - duplicate enrollment returns `409`
+
+#### Get my enrollment state for a course
+
+`GET /api/v1/courses/:courseId/enrollment`
+
+Auth:
+
+- Bearer token required
+- role must be `student`
+
+Response:
+
+- returns `isEnrolled`
+- when enrolled, returns enrollment data plus:
+  - `completedLessonIds`
+  - `completedLessonsCount`
+  - `totalLessons`
+  - `progressPercent`
 
 #### List my enrollments
 
@@ -640,6 +668,62 @@ Body:
   "progressPercent": 65
 }
 ```
+
+Note:
+
+- this endpoint still exists
+- the frontend Phase 2 flow now prefers lesson completion tracking for progress
+
+#### Update lesson completion
+
+`PATCH /api/v1/courses/:courseId/lessons/:lessonId/completion`
+
+Auth:
+
+- Bearer token required
+- role must be `student`
+- student must already be enrolled
+- lesson must belong to the specified course
+
+Body:
+
+```json
+{
+  "completed": true
+}
+```
+
+Behavior:
+
+- adds or removes the lesson from `completedLessons`
+- recalculates `progressPercent` automatically from total course lessons
+- returns updated enrollment summary
+
+### Instructor Dashboard
+
+#### Get instructor dashboard
+
+`GET /api/v1/instructor/dashboard`
+
+Auth:
+
+- Bearer token required
+- role must be `instructor`
+
+Response:
+
+- `summary`
+  - `totalCourses`
+  - `totalLessons`
+  - `totalEnrollments`
+  - `totalComments`
+  - `averageCourseRating`
+- `items`
+  - instructor-owned courses enriched with:
+    - `lessonCount`
+    - `enrollmentCount`
+    - `commentCount`
+    - `averageStudentProgress`
 
 ### Comments
 
@@ -760,6 +844,7 @@ Next.js App Router pages:
 - `/courses`
 - `/courses/new`
 - `/courses/[id]`
+- `/instructor/dashboard`
 - `/me/enrollments`
 
 Error/loading handlers exist for:
@@ -767,6 +852,7 @@ Error/loading handlers exist for:
 - root app
 - courses list
 - course detail
+- instructor dashboard
 - enrollments page
 
 ### Layout
@@ -901,6 +987,15 @@ File: `apps/web/src/app/courses/new/page.js`
   - unauthenticated users
   - logged-in non-instructor users
 
+### Instructor dashboard `/instructor/dashboard`
+
+File: `apps/web/src/app/instructor/dashboard/page.js`
+
+- server component
+- reads token from cookie
+- fetches `GET /instructor/dashboard`
+- shows summary cards and course-level metrics for instructor-owned courses
+
 ### Course detail page `/courses/[id]`
 
 Files:
@@ -918,12 +1013,13 @@ Student UI actions:
 
 - enroll
 - rate course
-- update progress
+- track lesson completion
 - edit own comments
 - delete own comments
 
 Instructor UI actions:
 
+- open instructor dashboard
 - edit course
 - delete course
 - add lesson
@@ -953,6 +1049,7 @@ File: `apps/web/src/app/me/enrollments/page.js`
 
 - shows auth-dependent links
 - always shows `/courses`
+- shows `/instructor/dashboard` when logged-in user is an instructor
 - shows `/courses/new` when logged-in user is an instructor
 - shows `/me/enrollments` only when logged in
 - uses `Badge` to display role
@@ -976,7 +1073,8 @@ Main interactive page logic:
   - course deletion
   - enrollment
   - rating
-  - progress update
+  - enrollment-state fetch for students
+  - lesson completion toggling
   - lesson creation
   - lesson update
   - lesson deletion
@@ -988,6 +1086,7 @@ Main interactive page logic:
 
 - displays lesson order/title/content
 - supports instructor-side lesson editing/deletion
+- supports student-side complete/incomplete toggling when enrolled
 - renders `CommentBox`
 
 ### `CommentBox`
@@ -1041,17 +1140,18 @@ These are important for any future AI making changes.
 - middleware trusts cookie existence only
 - no refresh token strategy
 
-### 2. Student progress UI is not hydrated from actual enrollment
+### 2. Student progress UI is no longer manual-first
 
-On course detail page:
+Phase 2 changed the preferred flow:
 
-- progress slider starts from local component state `0`
-- it does not preload the student's existing enrollment progress
+- course detail page now fetches enrollment state for the logged-in student
+- lesson completion updates progress automatically from backend data
+- manual progress endpoint still exists, but the current frontend flow does not rely on it
 
 ### 3. Enroll button does not know if user is already enrolled
 
-- frontend always offers enroll action to students
-- duplicate enrollment is rejected by backend with `409`
+- improved, but still tied to client auth hydration timing
+- duplicate enrollment is still safely rejected by backend with `409`
 
 ### 4. Encoding/mojibake issues exist in several frontend files
 
@@ -1081,7 +1181,7 @@ Current known lint blockers in the web app:
 - `apps/web/src/hooks/useAuth.js`
   - React 19 rule about synchronous `setState` inside `useEffect`
 
-The latest lesson/comment/course CRUD changes were checked with `node --check`, and the remaining lint failures are pre-existing/non-CRUD issues.
+The latest lesson/comment/course CRUD and Phase 2 dashboard/completion changes were checked with `node --check`, and the remaining lint failures are pre-existing/non-CRUD issues.
 
 ### 7. Web README is stale/template content
 
@@ -1146,9 +1246,9 @@ Primary files:
 
 ## 18. Current Roadmap
 
-### Current focus: Phase 1
+### Phase 1
 
-Phase 1 is the current planned scope for the next set of upgrades.
+Phase 1 covered core course CRUD and foundational auth/profile preparation.
 
 Goals:
 
@@ -1183,12 +1283,29 @@ Planned frontend work:
 - transition auth reads away from localStorage-first model
 - update middleware and SSR pages to use backend cookie/session flow
 
+### Phase 2
+
+Phase 2 focuses on instructor visibility and student completion tracking.
+
+Goals:
+
+- instructor dashboard
+- lesson completion tracking
+
+Progress:
+
+- instructor dashboard
+  - backend: done
+  - frontend: done
+- lesson completion tracking
+  - backend: done
+  - frontend: done
+
 ## 19. Missing Features
 
 Not currently implemented:
 
 - admin dashboard
-- instructor dashboard
 - password reset
 - email verification
 - file uploads

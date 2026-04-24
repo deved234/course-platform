@@ -4,6 +4,7 @@ const courseRoutes = require("../modules/courses/course.routes");
 const lessonRoutes = require("../modules/lessons/lesson.routes");
 const enrollmentRoutes = require("../modules/enrollments/enrollment.routes");
 const commentRoutes = require("../modules/comments/comment.routes");
+const dashboardRoutes = require("../modules/dashboard/dashboard.routes");
 
 const router = express.Router();
 
@@ -19,5 +20,6 @@ router.use("/courses", courseRoutes);
 router.use("/", lessonRoutes);
 router.use("/", enrollmentRoutes);
 router.use("/", commentRoutes);
+router.use("/", dashboardRoutes);
 
 module.exports = router;

@@ -27,8 +27,29 @@ const updateProgressSchema = z.object({
   query: z.object({}).default({}),
 });
 
+const getMyCourseEnrollmentSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    courseId: z.string().trim().min(1),
+  }),
+  query: z.object({}).default({}),
+});
+
+const updateLessonCompletionSchema = z.object({
+  body: z.object({
+    completed: z.boolean(),
+  }),
+  params: z.object({
+    courseId: z.string().trim().min(1),
+    lessonId: z.string().trim().min(1),
+  }),
+  query: z.object({}).default({}),
+});
+
 module.exports = {
   enrollInCourseSchema,
   listMyEnrollmentsSchema,
   updateProgressSchema,
+  getMyCourseEnrollmentSchema,
+  updateLessonCompletionSchema,
 };

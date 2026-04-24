@@ -13,6 +13,9 @@ export default function LessonItem({
   onUpdateLesson,
   onDeleteLesson,
   pending,
+  canTrackCompletion,
+  isCompleted,
+  onToggleCompletion,
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(lesson.title);
@@ -46,6 +49,14 @@ export default function LessonItem({
     }
   }
 
+  async function handleToggleCompletion() {
+    setError(null);
+    const didUpdate = await onToggleCompletion?.(lesson._id, !isCompleted);
+    if (!didUpdate) {
+      setError("Failed to update lesson completion");
+    }
+  }
+
   return (
     <li className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm hover:shadow-md transition-all dark:border-zinc-800 dark:bg-zinc-950 space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -54,36 +65,68 @@ export default function LessonItem({
             <span className="inline-block rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700 dark:bg-violet-950/30 dark:text-violet-300">
               Lesson {lesson.order}
             </span>
+            {canTrackCompletion ? (
+              <span
+                className={`inline-block rounded-full px-3 py-1 text-xs font-semibold ${
+                  isCompleted
+                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"
+                    : "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+                }`}
+              >
+                {isCompleted ? "Completed" : "Not completed"}
+              </span>
+            ) : null}
           </div>
           <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
             {lesson.title}
           </h3>
         </div>
-        {canManageLesson ? (
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setIsEditing((value) => !value);
-                setError(null);
-              }}
-              className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-            >
-              {isEditing ? "Cancel" : "Edit"}
-            </button>
-            <button
-              type="button"
-              disabled={pending}
-              onClick={handleDelete}
-              className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
-            >
-              Delete
-            </button>
+        {canManageLesson || canTrackCompletion ? (
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {canTrackCompletion ? (
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleToggleCompletion}
+                className={`rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-50 ${
+                  isCompleted
+                    ? "border border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-300 dark:hover:bg-amber-950/30"
+                    : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                }`}
+              >
+                {isCompleted ? "Mark Incomplete" : "Mark Complete"}
+              </button>
+            ) : null}
+            {canManageLesson ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsEditing((value) => !value);
+                    setError(null);
+                  }}
+                  className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                >
+                  {isEditing ? "Cancel" : "Edit"}
+                </button>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={handleDelete}
+                  className="rounded-lg border border-red-300 px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+                >
+                  Delete
+                </button>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>
       {isEditing ? (
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40"
+        >
           <div>
             <label className="mb-2 block text-sm font-semibold text-zinc-700 dark:text-zinc-300">
               Lesson Title
