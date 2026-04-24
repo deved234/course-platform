@@ -17,6 +17,14 @@ export default function Navbar() {
           <Link href="/courses" className="text-zinc-600 hover:text-violet-600 dark:text-zinc-400 dark:hover:text-violet-400 transition-colors">
             📚 Courses
           </Link>
+          {isLoggedIn && role === "instructor" ? (
+            <Link
+              href="/courses/new"
+              className="text-zinc-600 hover:text-violet-600 dark:text-zinc-400 dark:hover:text-violet-400 transition-colors"
+            >
+              Create Course
+            </Link>
+          ) : null}
           {isLoggedIn ? (
             <Link
               href="/me/enrollments"

@@ -1,5 +1,8 @@
 const mongoose = require("mongoose");
 const Course = require("./course.model");
+const Comment = require("../comments/comment.model");
+const Enrollment = require("../enrollments/enrollment.model");
+const Lesson = require("../lessons/lesson.model");
 const pickFields = require("../../utils/pickFields");
 const AppError = require("../../utils/AppError");
 
@@ -21,6 +24,26 @@ const getCourseById = async (courseId) => {
   }
 
   return course;
+};
+
+const updateCourse = async (courseId, payload, instructorId) => {
+  if (!mongoose.isValidObjectId(courseId)) {
+    throw new AppError("Invalid course id", 400);
+  }
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
+
+  if (course.instructor.toString() !== instructorId.toString()) {
+    throw new AppError("You can only update your own courses", 403);
+  }
+
+  Object.assign(course, payload);
+  await course.save();
+
+  return course.populate("instructor", "name email role");
 };
 
 const listCourses = async (query) => {
@@ -58,6 +81,32 @@ const listCourses = async (query) => {
   };
 };
 
+const deleteCourse = async (courseId, instructorId) => {
+  if (!mongoose.isValidObjectId(courseId)) {
+    throw new AppError("Invalid course id", 400);
+  }
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    throw new AppError("Course not found", 404);
+  }
+
+  if (course.instructor.toString() !== instructorId.toString()) {
+    throw new AppError("You can only delete your own courses", 403);
+  }
+
+  const lessons = await Lesson.find({ course: course._id }).select("_id");
+  const lessonIds = lessons.map((lesson) => lesson._id);
+
+  if (lessonIds.length > 0) {
+    await Comment.deleteMany({ lesson: { $in: lessonIds } });
+  }
+
+  await Lesson.deleteMany({ course: course._id });
+  await Enrollment.deleteMany({ course: course._id });
+  await course.deleteOne();
+};
+
 const rateCourse = async (courseId, studentId, ratingValue) => {
   const course = await Course.findById(courseId);
   if (!course) {
@@ -87,6 +136,8 @@ const rateCourse = async (courseId, studentId, ratingValue) => {
 
 module.exports = {
   createCourse,
+  updateCourse,
+  deleteCourse,
   getCourseById,
   listCourses,
   rateCourse,

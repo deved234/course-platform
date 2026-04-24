@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { apiFetch } from "@/lib/api";
 import LessonItem from "@/components/LessonItem";
@@ -9,6 +10,7 @@ import ErrorMessage from "@/components/ui/ErrorMessage";
 import Link from "next/link";
 
 export default function CourseDetailClient({ courseId, initialCourse, initialLessons }) {
+  const router = useRouter();
   const { user, token, role, isLoggedIn } = useAuth();
   const [course, setCourse] = useState(initialCourse);
   const [lessons, setLessons] = useState(initialLessons || []);
@@ -19,6 +21,12 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonContent, setLessonContent] = useState("");
   const [lessonOrder, setLessonOrder] = useState(1);
+  const [courseTitle, setCourseTitle] = useState(initialCourse?.title ?? "");
+  const [courseDescription, setCourseDescription] = useState(
+    initialCourse?.description ?? ""
+  );
+  const [courseCategory, setCourseCategory] = useState(initialCourse?.category ?? "");
+  const [editingCourse, setEditingCourse] = useState(false);
 
   const [rating, setRating] = useState(5);
   const [progress, setProgress] = useState(0);
@@ -32,9 +40,12 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
   const isGuest = !isLoggedIn;
   const isStudent = role === "student";
   const isInstructor = role === "instructor";
+  const currentUserId = user?.id ?? null;
 
-  const ratingDisplay = course?.rating?.toFixed(1) ?? "N/A";
-  const ratingCount = course?.ratingCount ?? 0;
+  const ratingValue =
+    typeof course?.averageRating === "number" ? course.averageRating : 0;
+  const ratingDisplay = ratingValue > 0 ? ratingValue.toFixed(1) : "N/A";
+  const ratingCount = Array.isArray(course?.ratings) ? course.ratings.length : 0;
 
   async function handleEnroll() {
     if (!token) return;
@@ -75,6 +86,15 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
       return;
     }
 
+    setCourse((current) =>
+      current
+        ? {
+            ...current,
+            averageRating: Number(rating),
+            ratings: current.ratings || [],
+          }
+        : current
+    );
     setMessage("Rating submitted successfully!");
     setTimeout(() => setMessage(null), 3000);
   }
@@ -133,8 +153,127 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
     setLessonTitle("");
     setLessonContent("");
     setLessonOrder((prev) => Number(prev) + 1);
-    setLessons((current) => [...current, data]);
+    setLessons((current) =>
+      [...current, data].sort((a, b) => {
+        if (a.order !== b.order) return a.order - b.order;
+        return String(a._id).localeCompare(String(b._id));
+      })
+    );
     setTimeout(() => setMessage(null), 3000);
+  }
+
+  async function handleUpdateLesson(lessonId, values) {
+    if (!token) return false;
+
+    setPending(true);
+    setError(null);
+    setMessage(null);
+
+    const { data, error: err } = await apiFetch(`/lessons/${lessonId}`, {
+      method: "PATCH",
+      body: values,
+      token,
+    });
+
+    setPending(false);
+    if (err) {
+      setError(err);
+      return false;
+    }
+
+    setLessons((current) =>
+      current
+        .map((lesson) => (lesson._id === lessonId ? data : lesson))
+        .sort((a, b) => {
+          if (a.order !== b.order) return a.order - b.order;
+          return String(a._id).localeCompare(String(b._id));
+        })
+    );
+    setMessage("Lesson updated successfully!");
+    setTimeout(() => setMessage(null), 3000);
+    return true;
+  }
+
+  async function handleDeleteLesson(lessonId) {
+    if (!token) return false;
+    if (!window.confirm("Delete this lesson and its comments?")) {
+      return false;
+    }
+
+    setPending(true);
+    setError(null);
+    setMessage(null);
+
+    const { error: err } = await apiFetch(`/lessons/${lessonId}`, {
+      method: "DELETE",
+      token,
+    });
+
+    setPending(false);
+    if (err) {
+      setError(err);
+      return false;
+    }
+
+    setLessons((current) => current.filter((lesson) => lesson._id !== lessonId));
+    setMessage("Lesson deleted successfully!");
+    setTimeout(() => setMessage(null), 3000);
+    return true;
+  }
+
+  async function handleCourseUpdate(e) {
+    e.preventDefault();
+    if (!token || !isOwner) return;
+
+    setPending(true);
+    setError(null);
+    setMessage(null);
+
+    const { data, error: err } = await apiFetch(`/courses/${courseId}`, {
+      method: "PATCH",
+      body: {
+        title: courseTitle,
+        description: courseDescription,
+        category: courseCategory,
+      },
+      token,
+    });
+
+    setPending(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    setCourse(data);
+    setEditingCourse(false);
+    setMessage("Course updated successfully!");
+    setTimeout(() => setMessage(null), 3000);
+  }
+
+  async function handleCourseDelete() {
+    if (!token || !isOwner) return;
+    if (!window.confirm("Delete this course, all lessons, comments, and enrollments?")) {
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+    setMessage(null);
+
+    const { error: err } = await apiFetch(`/courses/${courseId}`, {
+      method: "DELETE",
+      token,
+    });
+
+    setPending(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+
+    router.push("/courses");
+    router.refresh();
   }
 
   return (
@@ -172,6 +311,103 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
           </div>
         </div>
       </div>
+
+      {isOwner ? (
+        <section className="space-y-4 rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Manage Course</h2>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                Update the course details or remove the course entirely.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingCourse((value) => !value);
+                  setError(null);
+                }}
+                className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              >
+                {editingCourse ? "Cancel" : "Edit Course"}
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={handleCourseDelete}
+                className="rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+              >
+                Delete Course
+              </button>
+            </div>
+          </div>
+
+          {editingCourse ? (
+            <form onSubmit={handleCourseUpdate} className="space-y-4 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/40">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  Course Title
+                </label>
+                <input
+                  required
+                  value={courseTitle}
+                  onChange={(e) => setCourseTitle(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  Category
+                </label>
+                <input
+                  required
+                  value={courseCategory}
+                  onChange={(e) => setCourseCategory(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700 dark:text-zinc-300">
+                  Description
+                </label>
+                <textarea
+                  required
+                  rows={5}
+                  value={courseDescription}
+                  onChange={(e) => setCourseDescription(e.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm focus:border-violet-500 focus:ring-2 focus:ring-violet-500/20 dark:border-zinc-600 dark:bg-zinc-950"
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="submit"
+                  disabled={pending}
+                  className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-50"
+                >
+                  Save Course
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCourseTitle(course?.title ?? "");
+                    setCourseDescription(course?.description ?? "");
+                    setCourseCategory(course?.category ?? "");
+                    setEditingCourse(false);
+                    setError(null);
+                  }}
+                  className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+          ) : null}
+        </section>
+      ) : null}
 
       {/* Messages */}
       {error && <ErrorMessage message={error} onRetry={() => setError(null)} />}
@@ -340,6 +576,12 @@ export default function CourseDetailClient({ courseId, initialCourse, initialLes
                 lesson={lesson}
                 token={token}
                 canComment={isStudent && Boolean(token)}
+                canManageLesson={isOwner}
+                canModerateComments={isOwner}
+                currentUserId={currentUserId}
+                onUpdateLesson={handleUpdateLesson}
+                onDeleteLesson={handleDeleteLesson}
+                pending={pending}
               />
             ))}
           </div>

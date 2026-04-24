@@ -10,6 +10,34 @@ const createCourseSchema = z.object({
   query: z.object({}).default({}),
 });
 
+const updateCourseSchema = z.object({
+  body: z.object({
+    title: z.string().min(3).max(150).optional(),
+    description: z.string().min(10).max(2000).optional(),
+    category: z.string().min(2).max(100).optional(),
+  }).refine(
+    (body) =>
+      body.title !== undefined ||
+      body.description !== undefined ||
+      body.category !== undefined,
+    {
+      message: "At least one field is required to update the course",
+    }
+  ),
+  params: z.object({
+    courseId: z.string().trim().min(1),
+  }),
+  query: z.object({}).default({}),
+});
+
+const deleteCourseSchema = z.object({
+  body: z.object({}).default({}),
+  params: z.object({
+    courseId: z.string().trim().min(1),
+  }),
+  query: z.object({}).default({}),
+});
+
 const rateCourseSchema = z.object({
   body: z.object({
     rating: z.coerce.number().min(1).max(5),
@@ -43,6 +71,8 @@ const listCoursesSchema = z.object({
 
 module.exports = {
   createCourseSchema,
+  updateCourseSchema,
+  deleteCourseSchema,
   getCourseSchema,
   rateCourseSchema,
   listCoursesSchema,

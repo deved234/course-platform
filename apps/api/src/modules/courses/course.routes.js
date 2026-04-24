@@ -5,6 +5,8 @@ const restrictTo = require("../../middlewares/role.middleware");
 const controller = require("./course.controller");
 const {
   createCourseSchema,
+  updateCourseSchema,
+  deleteCourseSchema,
   getCourseSchema,
   rateCourseSchema,
   listCoursesSchema,
@@ -20,6 +22,20 @@ router.post(
   restrictTo("instructor"),
   validate(createCourseSchema),
   controller.createCourse
+);
+router.patch(
+  "/:courseId",
+  protect,
+  restrictTo("instructor"),
+  validate(updateCourseSchema),
+  controller.updateCourse
+);
+router.delete(
+  "/:courseId",
+  protect,
+  restrictTo("instructor"),
+  validate(deleteCourseSchema),
+  controller.deleteCourse
 );
 router.post(
   "/:courseId/rating",

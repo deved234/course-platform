@@ -31,6 +31,30 @@ const listCourses = asyncHandler(async (req, res) => {
   });
 });
 
+const updateCourse = asyncHandler(async (req, res) => {
+  const course = await courseService.updateCourse(
+    req.params.courseId,
+    req.body,
+    req.user._id
+  );
+
+  res.status(200).json({
+    success: true,
+    message: "Course updated successfully",
+    data: course,
+  });
+});
+
+const deleteCourse = asyncHandler(async (req, res) => {
+  await courseService.deleteCourse(req.params.courseId, req.user._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Course deleted successfully",
+    data: null,
+  });
+});
+
 const rateCourse = asyncHandler(async (req, res) => {
   const course = await courseService.rateCourse(
     req.params.courseId,
@@ -47,6 +71,8 @@ const rateCourse = asyncHandler(async (req, res) => {
 
 module.exports = {
   createCourse,
+  updateCourse,
+  deleteCourse,
   getCourse,
   listCourses,
   rateCourse,
